@@ -264,105 +264,89 @@
 <!-- ************************** donation *********************** -->
 <div style="text-align: center;">  
 	<h1 class="text-capitalize">Donate us for helping those who need you</h1>
-</div>
 <div id="smart-button-container">
-    <div style="text-align: center"><label for="description"> </label><input type="text" name="descriptionInput" id="description" maxlength="127" value=""><span> Name</span></div>
-      <p id="descriptionError" style="visibility: hidden; color:red; text-align: center;">Please enter a description</p>
-    <div style="text-align: center"><label for="amount"> </label><input name="amountInput" type="number" id="amount" value="" ><span> USD</span></div>
-      <p id="priceLabelError" style="visibility: hidden; color:red; text-align: center;">Please enter a price</p>
-    <div id="invoiceidDiv" style="text-align: center; display: none;"><label for="invoiceid"> </label><input name="invoiceid" maxlength="127" type="text" id="invoiceid" value="" ></div>
-      <p id="invoiceidError" style="visibility: hidden; color:red; text-align: center;">Please enter an Invoice ID</p>
-    <div style="text-align: center; margin-top: 0.625rem;" id="paypal-button-container"></div>
-  </div>
-  <script src="https://www.paypal.com/sdk/js?client-id=sb&enable-funding=venmo&currency=USD" data-sdk-integration-source="button-factory"></script>
-  <script>
-  function initPayPalButton() {
-    var description = document.querySelector('#smart-button-container #description');
-    var amount = document.querySelector('#smart-button-container #amount');
-    var descriptionError = document.querySelector('#smart-button-container #descriptionError');
-    var priceError = document.querySelector('#smart-button-container #priceLabelError');
-    var invoiceid = document.querySelector('#smart-button-container #invoiceid');
-    var invoiceidError = document.querySelector('#smart-button-container #invoiceidError');
-    var invoiceidDiv = document.querySelector('#smart-button-container #invoiceidDiv');
-
-    var elArr = [description, amount];
-
-    if (invoiceidDiv.firstChild.innerHTML.length > 1) {
-      invoiceidDiv.style.display = "block";
+      <div style="text-align: center;">
+        <div style="margin-bottom: 1.25rem;">
+          <p>Donate Us</p>
+          <select id="item-options"><option value="Very Small" price="1">Very Small - 1 USD</option><option value="Small" price="3">Small - 3 USD</option><option value="Medium" price="5">Medium - 5 USD</option><option value="Large" price="10">Large - 10 USD</option><option value="Very Large" price="20">Very Large - 20 USD</option></select>
+          <select style="visibility: hidden" id="quantitySelect"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select>
+        </div>
+      <div id="paypal-button-container"></div>
+      </div>
+    </div>
+    <script src="https://www.paypal.com/sdk/js?client-id=sb&enable-funding=venmo&currency=USD" data-sdk-integration-source="button-factory"></script>
+    <script>
+      function initPayPalButton() {
+        var shipping = 0;
+        var itemOptions = document.querySelector("#smart-button-container #item-options");
+    var quantity = parseInt(10);
+    var quantitySelect = document.querySelector("#smart-button-container #quantitySelect");
+    if (!isNaN(quantity)) {
+      quantitySelect.style.visibility = "visible";
     }
-
-    var purchase_units = [];
-    purchase_units[0] = {};
-    purchase_units[0].amount = {};
-
-    function validate(event) {
-      return event.value.length > 0;
+    var orderDescription = 'Donate Us';
+    if(orderDescription === '') {
+      orderDescription = 'Item';
     }
-
     paypal.Buttons({
       style: {
-        color: 'blue',
         shape: 'pill',
-        label: 'pay',
+        color: 'blue',
         layout: 'vertical',
+        label: 'paypal',
         
       },
-
-      onInit: function (data, actions) {
-        actions.disable();
-
-        if(invoiceidDiv.style.display === "block") {
-          elArr.push(invoiceid);
-        }
-
-        elArr.forEach(function (item) {
-          item.addEventListener('keyup', function (event) {
-            var result = elArr.every(validate);
-            if (result) {
-              actions.enable();
-            } else {
-              actions.disable();
-            }
-          });
-        });
-      },
-
-      onClick: function () {
-        if (description.value.length < 1) {
-          descriptionError.style.visibility = "visible";
+      createOrder: function(data, actions) {
+        var selectedItemDescription = itemOptions.options[itemOptions.selectedIndex].value;
+        var selectedItemPrice = parseFloat(itemOptions.options[itemOptions.selectedIndex].getAttribute("price"));
+        var tax = (0 === 0 || false) ? 0 : (selectedItemPrice * (parseFloat(0)/100));
+        if(quantitySelect.options.length > 0) {
+          quantity = parseInt(quantitySelect.options[quantitySelect.selectedIndex].value);
         } else {
-          descriptionError.style.visibility = "hidden";
+          quantity = 1;
         }
 
-        if (amount.value.length < 1) {
-          priceError.style.visibility = "visible";
-        } else {
-          priceError.style.visibility = "hidden";
-        }
+        tax *= quantity;
+        tax = Math.round(tax * 100) / 100;
+        var priceTotal = quantity * selectedItemPrice + parseFloat(shipping) + tax;
+        priceTotal = Math.round(priceTotal * 100) / 100;
+        var itemTotalValue = Math.round((selectedItemPrice * quantity) * 100) / 100;
 
-        if (invoiceid.value.length < 1 && invoiceidDiv.style.display === "block") {
-          invoiceidError.style.visibility = "visible";
-        } else {
-          invoiceidError.style.visibility = "hidden";
-        }
-
-        purchase_units[0].description = description.value;
-        purchase_units[0].amount.value = amount.value;
-
-        if(invoiceid.value !== '') {
-          purchase_units[0].invoice_id = invoiceid.value;
-        }
-      },
-
-      createOrder: function (data, actions) {
         return actions.order.create({
-          purchase_units: purchase_units,
+          purchase_units: [{
+            description: orderDescription,
+            amount: {
+              currency_code: 'USD',
+              value: priceTotal,
+              breakdown: {
+                item_total: {
+                  currency_code: 'USD',
+                  value: itemTotalValue,
+                },
+                shipping: {
+                  currency_code: 'USD',
+                  value: shipping,
+                },
+                tax_total: {
+                  currency_code: 'USD',
+                  value: tax,
+                }
+              }
+            },
+            items: [{
+              name: selectedItemDescription,
+              unit_amount: {
+                currency_code: 'USD',
+                value: selectedItemPrice,
+              },
+              quantity: quantity
+            }]
+          }]
         });
       },
-
-      onApprove: function (data, actions) {
-        return actions.order.capture().then(function (orderData) {
-
+      onApprove: function(data, actions) {
+        return actions.order.capture().then(function(orderData) {
+          
           // Full available details
           console.log('Capture result', orderData, JSON.stringify(orderData, null, 2));
 
@@ -372,17 +356,16 @@
           element.innerHTML = '<h3>Thank you for your payment!</h3>';
 
           // Or go to another URL:  actions.redirect('thank_you.html');
-          
+
         });
       },
-
-      onError: function (err) {
+      onError: function(err) {
         console.log(err);
-      }
+      },
     }).render('#paypal-button-container');
   }
   initPayPalButton();
-  </script>
+    </script>
 
 <!-- ************************** contact us *********************** -->
 
